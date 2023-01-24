@@ -16,6 +16,7 @@
 package lottery
 
 import (
+	"fmt"
 	"math/big"
 	"math/rand"
 	"time"
@@ -29,6 +30,8 @@ const (
 	LotterySmartContractAddressFlag = "lottery-contract"
 	RPCEndpointFlag                 = "rpc-endpoint"
 	VerifyDrawResultsFlag           = "verify"
+
+	LotteryResultsPublished uint8 = 3
 )
 
 func ListCmd(cmd *cobra.Command, args []string) {
@@ -91,9 +94,13 @@ func TicketsCmd(cmd *cobra.Command, args []string) {
 	// indication if the user requested to verify the results and the lottery
 	// has the random value to determine the lottery results.
 	var (
-		canVerify        = verifyResults && lottery.DrawSecret != nil && lottery.DrawSecret.BitLen() > 0
+		canVerify        = verifyResults && lottery.Status == LotteryResultsPublished
 		verifyPercentage = 20
 	)
+
+	if verifyResults && lottery.Status != LotteryResultsPublished {
+		fmt.Println("Lottery results not (fully) published, skip verification of results.")
+	}
 
 	for page := uint64(0); ; page++ {
 		tickets, err := contract.SoldTicketsPaged(nil, lotteryID, page, pageSize)
