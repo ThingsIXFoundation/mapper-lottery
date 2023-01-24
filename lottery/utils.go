@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -52,7 +53,7 @@ func createBindings(cmd *cobra.Command) (*LotteryCaller, *ethclient.Client, erro
 	return lottery, client, nil
 }
 
-func printTickets(lottery IMapperLotteryByDrawLotteryDetails, participants []*draw.Participant) {
+func printTickets(lottery IMapperLotteryByDrawLotteryDetails, participants []*draw.Participant, fetchedResults map[uint64]bool) {
 	if len(participants) == 0 {
 		fmt.Println("no tickets sold")
 		return
@@ -95,9 +96,31 @@ func printTickets(lottery IMapperLotteryByDrawLotteryDetails, participants []*dr
 	}
 
 	table.Render()
+
+	sort.Slice(winningTickets, func(x, y int) bool {
+		return winningTickets[x] < winningTickets[y]
+	})
+
+	// verify the fetched results with the calculated results
+	for ticketNum, ticketWon := range fetchedResults {
+		if contains(ticketNum, winningTickets) != ticketWon {
+			fmt.Printf("ticket %d in lottery %d has incorrect result!\nPlease report to ThingsIX Foundation.\n", ticketNum, lottery.Id)
+			return
+		}
+	}
+
 	if len(winningTickets) > 0 {
 		fmt.Printf("winning ticket numbers: [%v]\n", strings.Trim(strings.Replace(fmt.Sprint(winningTickets), " ", ",", -1), "[]"))
 	}
+}
+
+func contains(val uint64, slice []uint64) bool {
+	for _, sv := range slice {
+		if val == sv {
+			return true
+		}
+	}
+	return false
 }
 
 func printLotteries(client *ethclient.Client, lotteries []IMapperLotteryByDrawLotteryDetails) {

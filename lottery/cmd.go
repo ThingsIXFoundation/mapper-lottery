@@ -17,6 +17,7 @@ package lottery
 
 import (
 	"math/big"
+	"math/rand"
 	"time"
 
 	"github.com/ThingsIXFoundation/mapper-lottery/draw"
@@ -27,6 +28,7 @@ import (
 const (
 	LotterySmartContractAddressFlag = "lottery-contract"
 	RPCEndpointFlag                 = "rpc-endpoint"
+	VerifyDrawResultsFlag           = "verify"
 )
 
 func ListCmd(cmd *cobra.Command, args []string) {
@@ -70,7 +72,12 @@ func TicketsCmd(cmd *cobra.Command, args []string) {
 		participants           = make(map[common.Address][]uint64)
 		pageSize               = uint64(50)
 		lotteryID, lotteryIDOk = new(big.Int).SetString(args[0], 0)
+		verifyResults, _       = cmd.Flags().GetBool(VerifyDrawResultsFlag)
+		retrievedTicketResults = make(map[uint64]bool)
 	)
+
+	// pseudo random to determine which tickets to verify the results for
+	rand.Seed(time.Now().UnixMicro())
 
 	if !lotteryIDOk {
 		panic("invalid lottery id")
@@ -80,6 +87,13 @@ func TicketsCmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
+
+	// indication if the user requested to verify the results and the lottery
+	// has the random value to determine the lottery results.
+	var (
+		canVerify        = verifyResults && lottery.DrawSecret != nil && lottery.DrawSecret.BitLen() > 0
+		verifyPercentage = 20
+	)
 
 	for page := uint64(0); ; page++ {
 		tickets, err := contract.SoldTicketsPaged(nil, lotteryID, page, pageSize)
@@ -91,7 +105,18 @@ func TicketsCmd(cmd *cobra.Command, args []string) {
 		}
 		for _, t := range tickets {
 			participants[t.Buyer] = append(participants[t.Buyer], t.Number)
+
+			if canVerify {
+				if rand.Intn(100) < verifyPercentage {
+					ticket, err := contract.MyTicket(nil, lotteryID, t.Buyer)
+					if err != nil {
+						panic(err)
+					}
+					retrievedTicketResults[ticket.Number] = ticket.Won
+				}
+			}
 		}
+
 		if len(tickets) != int(pageSize) {
 			break
 		}
@@ -106,5 +131,5 @@ func TicketsCmd(cmd *cobra.Command, args []string) {
 		})
 	}
 
-	printTickets(lottery, p)
+	printTickets(lottery, p, retrievedTicketResults)
 }

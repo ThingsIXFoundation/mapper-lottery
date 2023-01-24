@@ -28,5 +28,6 @@ var ticketsCmd = &cobra.Command{
 }
 
 func init() {
+	ticketsCmd.Flags().Bool(lottery.VerifyDrawResultsFlag, false, "verify ticket results (if possible)")
 	rootCmd.AddCommand(ticketsCmd)
 }

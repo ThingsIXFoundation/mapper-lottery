@@ -52,7 +52,7 @@ Retrieve all sold tickets for lottery with:
 $ ./mapper-lottery \
     --lottery-contract <lottery-smart-contract-address> \
     --rpc-endpoint <rpc-endpoint> \
-    tickets <lottery-id>
+    tickets <lottery-id> --verify
 
 +------------+--------------------------------------------+--------------------------------------------------------------------+--------+
 | TICKET NUM |                   BUYER                    |                              DRAW NUM                              | RESULT |
@@ -63,6 +63,10 @@ $ ./mapper-lottery \
 +------------+--------------------------------------------+--------------------------------------------------------------------+--------+
 winning ticket numbers: [1,3]
 ```
+
+This command accepts an optional verify flag. If the lottery results are
+available it will try to verify for ~20% of the sold tickets if their results
+in the lottery contract match with the locally calculated results.
 
 This subcommand expectes the lottery id as input. The output depends on the
 status of the lottery. If the lottery draw value is known it will include the
